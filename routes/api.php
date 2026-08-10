@@ -1,30 +1,15 @@
 <?php
 
-<<<<<<< Updated upstream
 use App\Http\Controllers\Api\JobPostingController;
+use App\Http\Controllers\Api\CvController;
+use App\Http\Controllers\Api\AnalysisController;
+use App\Http\Controllers\Auth\AuthController;
 use Illuminate\Support\Facades\Route;
 
 /**
  * Toutes les routes définies ici sont automatiquement préfixées par
- * "/api" (configuré dans bootstrap/app.php). Donc la route
- * "job-postings" ci-dessous correspond en réalité à l'URL complète
- * "/api/job-postings".
- *
- * apiResource() est un raccourci Laravel qui génère AUTOMATIQUEMENT
- * les 5 routes RESTful standard, chacune reliée à la bonne méthode
- * du Controller. C'est l'équivalent condensé d'écrire manuellement :
- *
- *   Route::get('/job-postings', [JobPostingController::class, 'index']);
- *   Route::post('/job-postings', [JobPostingController::class, 'store']);
- *   Route::get('/job-postings/{jobPosting}', [JobPostingController::class, 'show']);
- *   Route::put('/job-postings/{jobPosting}', [JobPostingController::class, 'update']);
- *   Route::delete('/job-postings/{jobPosting}', [JobPostingController::class, 'destroy']);
+ * "/api" (configuré dans bootstrap/app.php).
  */
-Route::apiResource('job-postings', JobPostingController::class);
-=======
-use App\Http\Controllers\Auth\AuthController;
-use App\Http\Controllers\JobPostingController;
-use Illuminate\Support\Facades\Route;
 
 // Routes d'authentification publiques
 Route::post('/register', [AuthController::class, 'register']);
@@ -42,5 +27,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Gestion des offres d'emploi
     Route::apiResource('job-postings', JobPostingController::class);
+
+    // Gestion des CVs liés à une offre d'emploi
+    Route::apiResource('job-postings.cvs', CvController::class)
+        ->except(['update']);
+
+    // Consultation de l'analyse d'un CV (ressource singleton, pas d'apiResource)
+    Route::get('job-postings/{jobPosting}/cvs/{cv}/analysis', [AnalysisController::class, 'show'])
+        ->name('job-postings.cvs.analysis.show');
 });
->>>>>>> Stashed changes
