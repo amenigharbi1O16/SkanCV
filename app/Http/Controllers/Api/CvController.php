@@ -13,7 +13,10 @@ use Illuminate\Support\Facades\Storage;
 class CvController extends Controller
 {
     /**
-     * Liste les CVs associés à une offre d'emploi.
+     * GET /job-postings/{jobPosting}/cvs
+     * MISSION : lister les candidatures reçues pour une offre.
+     * with('analysis') évite le N+1 : sans ça, chaque CV déclencherait
+     * une requête SQL séparée pour vérifier s'il a une analyse.
      */
     public function index(JobPosting $jobPosting)
     {
@@ -23,22 +26,31 @@ class CvController extends Controller
     }
 
     /**
-     * Enregistre un nouveau CV et stocke le fichier PDF.
+     * POST /job-postings/{jobPosting}/cvs
+     * MISSION : stocker le PDF de façon privée + créer le CV.
+     * extracted_text et extracted_skills restent NULL ici : ils seront
+     * remplis par le Job en queue à l'étape suivante (appel FastAPI /extract).
      */
     public function store(StoreCvRequest $request, JobPosting $jobPosting)
     {
         $file = $request->file('file');
 
-        // Stockage privé du fichier PDF
+        // storage/app/private/cvs/xxxxx.pdf — nom généré par Laravel,
+        // jamais de collision, jamais d'URL publique.
         $path = $file->store('cvs', 'local');
 
         $cv = $jobPosting->cvs()->create([
             'candidate_name'  => $request->validated('candidate_name'),
             'candidate_email' => $request->validated('candidate_email'),
             'file_path'       => $path,
+            // extracted_text / extracted_skills : absents ici volontairement,
+            // NULL par défaut tant que le pipeline n'est pas passé.
         ]);
 
-        // TODO: Déclencher le job d'analyse asynchrone
+        // TODO (étape suivante — queues Redis) :
+        // ProcessCvAnalysis::dispatch($cv);
+        // Ce Job appellera FastAPI /extract (remplit extracted_text/extracted_skills
+        // sur ce Cv), puis /score (crée l'Analysis correspondante).
 
         return (new CvResource($cv))
             ->response()
@@ -46,11 +58,13 @@ class CvController extends Controller
     }
 
     /**
-     * Affiche un CV spécifique.
+     * GET /job-postings/{jobPosting}/cvs/{cv}
      */
     public function show(JobPosting $jobPosting, Cv $cv)
     {
-        // Vérifie la cohérence de la relation entre le CV et l'offre d'emploi
+        // Vérifie que ce CV appartient bien à cette offre.
+        // Sans ce contrôle, n'importe quel cv_id valide serait accessible
+        // via n'importe quelle URL d'offre.
         abort_if($cv->job_posting_id !== $jobPosting->id, 404);
 
         $cv->load('analysis');
@@ -59,18 +73,17 @@ class CvController extends Controller
     }
 
     /**
-     * Supprime un CV et son fichier associé.
+     * DELETE /job-postings/{jobPosting}/cvs/{cv}
      */
     public function destroy(JobPosting $jobPosting, Cv $cv)
     {
         abort_if($cv->job_posting_id !== $jobPosting->id, 404);
 
-        // Supprime le fichier physique
+        // Fichier supprimé AVANT le record, sinon on perd file_path.
         Storage::disk('local')->delete($cv->file_path);
 
-        // Supprime l'enregistrement en base de données
-        $cv->delete();
+        $cv->delete(); // cascadeOnDelete() supprime l'Analysis liée en DB
 
-        return response()->noContent();
+        return response()->noContent(); // 204
     }
 }
