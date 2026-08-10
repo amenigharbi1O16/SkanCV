@@ -6,16 +6,19 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StoreCvRequest extends FormRequest
 {
-    /**
-     * Autorise l'action de soumettre un CV.
-     */
     public function authorize(): bool
     {
+        // Pas d'auth candidat prévue dans le scope actuel.
+        // Sera revu quand l'auth HR Staff (JWT/Sanctum/Passport) sera tranchée.
         return true;
     }
 
     /**
-     * Règles de validation du formulaire de dépôt de CV.
+     * MISSION : rejeter toute soumission incomplète ou dangereuse AVANT
+     * que le controller ne touche au disque ou à la base.
+     * On ne valide QUE candidate_name/candidate_email/file : extracted_text
+     * et extracted_skills ne sont jamais fournis par le client, ils sont
+     * remplis plus tard par le pipeline FastAPI côté serveur.
      */
     public function rules(): array
     {
@@ -25,15 +28,12 @@ class StoreCvRequest extends FormRequest
             'file' => [
                 'required',
                 'file',
-                'mimes:pdf',   // Vérifie que le fichier est bien un PDF
-                'max:5120',    // Taille max de 5 Mo
+                'mimes:pdf',   // vérifie le contenu réel, pas juste l'extension
+                'max:5120',    // 5 Mo (en Ko)
             ],
         ];
     }
 
-    /**
-     * Messages d'erreur personnalisés pour la validation.
-     */
     public function messages(): array
     {
         return [
