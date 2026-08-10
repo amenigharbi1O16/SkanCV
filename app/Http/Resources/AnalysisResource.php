@@ -7,9 +7,6 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class AnalysisResource extends JsonResource
 {
-    /**
-     * Convertit la ressource en tableau.
-     */
     public function toArray(Request $request): array
     {
         return [
