@@ -8,15 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
- * Cv représente une soumission de CV pour une offre d'emploi précise.
- *
- * Relations :
- * - CV appartient à 1 JobPosting (belongsTo)
- * - CV a 1 Analysis (hasOne)
- *
- * Rappel métier : un même candidat qui postule à 2 offres différentes
- * crée 2 lignes distinctes dans cette table (2 uploads séparés),
- * même si c'est physiquement le même fichier PDF.
+ * Modèle représentant un CV soumis pour une offre d'emploi.
  */
 class Cv extends Model
 {
@@ -34,20 +26,12 @@ class Cv extends Model
     protected function casts(): array
     {
         return [
-            // Même logique que pour required_skills sur JobPosting :
-            // JSON en base <-> tableau PHP en mémoire.
-            'extracted_skills' => 'array',
+            'extracted_skills' => 'array', // Cast JSON en tableau PHP
         ];
     }
 
     /**
-     * Relation inverse de JobPosting::cvs().
-     * Un CV appartient à exactement une offre d'emploi.
-     *
-     * Eloquent déduit la clé étrangère à partir du nom de la méthode
-     * (jobPosting -> job_posting_id), donc pas besoin de la préciser.
-     *
-     * Utilisation : $cv->jobPosting récupère l'objet JobPosting lié.
+     * Relation : Un CV appartient à une offre d'emploi.
      */
     public function jobPosting(): BelongsTo
     {
@@ -55,17 +39,7 @@ class Cv extends Model
     }
 
     /**
-     * Relation hasOne : un CV a au maximum une analyse.
-     *
-     * C'est la traduction Eloquent de la contrainte
-     * ->unique() qu'on a mise sur analyses.cv_id au niveau SQL.
-     * Attention : hasOne() côté PHP ne suffit PAS à garantir
-     * l'unicité (ce n'est qu'une facilité de navigation) — c'est
-     * bien la contrainte SQL unique() qui empêche réellement la
-     * création d'une deuxième analyse pour le même CV.
-     *
-     * Utilisation : $cv->analysis récupère l'objet Analysis lié
-     * (ou null si l'analyse n'a pas encore été créée/traitée).
+     * Relation : Un CV a une seule analyse associée.
      */
     public function analysis(): HasOne
     {
