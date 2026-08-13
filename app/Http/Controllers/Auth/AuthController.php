@@ -24,7 +24,7 @@ class AuthController extends Controller
         $user = User::create([
             'name'     => $request->validated('name'),
             'email'    => $request->validated('email'),
-            'password' => Hash::make($request->validated('password')),
+            'password' => $request->validated('password'),
         ]);
 
         // createToken() vient de HasApiTokens (Sanctum) sur le modèle User.
