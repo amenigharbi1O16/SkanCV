@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\AnalysisStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreCvRequest;
 use App\Http\Resources\CvResource;
+use App\Jobs\ProcessCvAnalysis;
+use App\Models\Analysis;
 use App\Models\Cv;
 use App\Models\JobPosting;
 use Illuminate\Http\Response;
@@ -27,9 +30,7 @@ class CvController extends Controller
 
     /**
      * POST /job-postings/{jobPosting}/cvs
-     * MISSION : stocker le PDF de façon privée + créer le CV.
-     * extracted_text et extracted_skills restent NULL ici : ils seront
-     * remplis par le Job en queue à l'étape suivante (appel FastAPI /extract).
+     * MISSION : stocker le PDF de façon privée, créer le CV et lancer l'analyse.
      */
     public function store(StoreCvRequest $request, JobPosting $jobPosting)
     {
@@ -43,16 +44,16 @@ class CvController extends Controller
             'candidate_name'  => $request->validated('candidate_name'),
             'candidate_email' => $request->validated('candidate_email'),
             'file_path'       => $path,
-            // extracted_text / extracted_skills : absents ici volontairement,
-            // NULL par défaut tant que le pipeline n'est pas passé.
         ]);
 
-        // TODO (étape suivante — queues Redis) :
-        // ProcessCvAnalysis::dispatch($cv);
-        // Ce Job appellera FastAPI /extract (remplit extracted_text/extracted_skills
-        // sur ce Cv), puis /score (crée l'Analysis correspondante).
+        Analysis::create([
+            'cv_id'  => $cv->id,
+            'status' => AnalysisStatus::PENDING,
+        ]);
 
-        return (new CvResource($cv))
+        ProcessCvAnalysis::dispatch($cv);
+
+        return (new CvResource($cv->fresh('analysis')))
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
     }
@@ -62,9 +63,6 @@ class CvController extends Controller
      */
     public function show(JobPosting $jobPosting, Cv $cv)
     {
-        // Vérifie que ce CV appartient bien à cette offre.
-        // Sans ce contrôle, n'importe quel cv_id valide serait accessible
-        // via n'importe quelle URL d'offre.
         abort_if($cv->job_posting_id !== $jobPosting->id, 404);
 
         $cv->load('analysis');
@@ -79,11 +77,10 @@ class CvController extends Controller
     {
         abort_if($cv->job_posting_id !== $jobPosting->id, 404);
 
-        // Fichier supprimé AVANT le record, sinon on perd file_path.
         Storage::disk('local')->delete($cv->file_path);
 
-        $cv->delete(); // cascadeOnDelete() supprime l'Analysis liée en DB
+        $cv->delete();
 
-        return response()->noContent(); // 204
+        return response()->noContent();
     }
 }
