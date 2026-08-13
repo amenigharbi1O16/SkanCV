@@ -8,8 +8,6 @@ class StoreCvRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        // Pas d'auth candidat prévue dans le scope actuel.
-        // Sera revu quand l'auth HR Staff (JWT/Sanctum/Passport) sera tranchée.
         return true;
     }
 
