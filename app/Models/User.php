@@ -8,7 +8,8 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
 /**
- * Modèle représentant un utilisateur (HR Staff).
+ * MISSION : compte HR Staff authentifiable via Sanctum (HasApiTokens).
+ * Seul acteur du système — crée offres, uploade CVs, consulte analyses.
  */
 class User extends Authenticatable
 {

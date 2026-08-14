@@ -8,7 +8,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Modèle représentant l'analyse et le score de matching d'un CV.
+ * MISSION : stocker le résultat immuable d'une analyse IA (1 CV = 1 analyse).
+ *
+ * Créée en PENDING par CvController@store, enrichie par ProcessCvAnalysis.
+ * Jamais modifiée via HTTP — conforme au cahier des charges Anypli.
  */
 class Analysis extends Model
 {

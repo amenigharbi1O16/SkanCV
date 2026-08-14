@@ -5,6 +5,10 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * MISSION : formater le résultat d'analyse IA pour le frontend HR.
+ * Expose score, justification et statut — jamais les données brutes internes.
+ */
 class AnalysisResource extends JsonResource
 {
     public function toArray(Request $request): array

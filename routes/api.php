@@ -7,8 +7,9 @@ use App\Http\Controllers\Auth\AuthController;
 use Illuminate\Support\Facades\Route;
 
 /**
- * Toutes les routes définies ici sont automatiquement préfixées par
- * "/api" (configuré dans bootstrap/app.php).
+ * MISSION : table de routage API SkanCV.
+ * Toutes les routes sont préfixées /api (bootstrap/app.php).
+ * Routes publiques : register/login. Tout le reste : auth:sanctum.
  */
 
 // Routes d'authentification publiques

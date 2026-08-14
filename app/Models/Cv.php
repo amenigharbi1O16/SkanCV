@@ -8,7 +8,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
- * Modèle représentant un CV soumis pour une offre d'emploi.
+ * MISSION : représenter un CV candidat uploadé pour une offre.
+ *
+ * file_path pointe vers storage/app/private (disque local).
+ * extracted_* sont remplis par ProcessCvAnalysis via FastAPI, jamais par le client HTTP.
  */
 class Cv extends Model
 {

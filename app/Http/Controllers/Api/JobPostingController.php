@@ -9,8 +9,14 @@ use App\Http\Resources\JobPostingResource;
 use App\Models\JobPosting;
 use Illuminate\Http\JsonResponse;
 
+/**
+ * MISSION : CRUD des offres d'emploi créées par le HR Staff.
+ * Chaque offre définit les compétences requises utilisées plus tard
+ * par ProcessCvAnalysis pour scorer les CVs uploadés.
+ */
 class JobPostingController extends Controller
 {
+    /** GET /api/job-postings — liste toutes les offres. */
     public function index(): JsonResponse
     {
         $jobPostings = JobPosting::all();
@@ -20,6 +26,7 @@ class JobPostingController extends Controller
         );
     }
 
+    /** POST /api/job-postings — crée une offre avec required_skills (JSON array). */
     public function store(StoreJobPostingRequest $request): JsonResponse
     {
         $jobPosting = JobPosting::create($request->validated());
@@ -30,11 +37,13 @@ class JobPostingController extends Controller
         );
     }
 
+    /** GET /api/job-postings/{id} — détail d'une offre. */
     public function show(JobPosting $jobPosting): JsonResponse
     {
         return response()->json(new JobPostingResource($jobPosting));
     }
 
+    /** PUT/PATCH /api/job-postings/{id} — met à jour partiellement ou totalement. */
     public function update(UpdateJobPostingRequest $request, JobPosting $jobPosting): JsonResponse
     {
         $jobPosting->update($request->validated());
@@ -42,6 +51,7 @@ class JobPostingController extends Controller
         return response()->json(new JobPostingResource($jobPosting));
     }
 
+    /** DELETE /api/job-postings/{id} — supprime l'offre et ses CVs (cascade). */
     public function destroy(JobPosting $jobPosting): JsonResponse
     {
         $jobPosting->delete();

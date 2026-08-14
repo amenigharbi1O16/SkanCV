@@ -5,6 +5,9 @@ namespace App\Http\Requests\Auth;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Password;
 
+/**
+ * MISSION : valider les données d'inscription HR Staff avant AuthController@register.
+ */
 class RegisterRequest extends FormRequest
 {
     /**

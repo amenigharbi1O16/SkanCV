@@ -8,6 +8,8 @@ use App\Models\Cv;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
+ * MISSION : générer des analyses en état pending/completed pour les tests du Job.
+ *
  * @extends Factory<Analysis>
  */
 class AnalysisFactory extends Factory

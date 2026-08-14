@@ -22,14 +22,8 @@ use Illuminate\Foundation\Http\FormRequest;
 class StoreJobPostingRequest extends FormRequest
 {
     /**
-     * authorize() détermine si l'utilisateur a le DROIT de faire
-     * cette action (indépendamment de la validité des données).
-     *
-     * Pour l'instant, on renvoie true partout, car l'authentification
-     * JWT n'est pas encore configurée (rappel : décision explicitement
-     * en attente de ton encadrant). Une fois JWT en place, on pourra
-     * ici vérifier par exemple que l'utilisateur connecté est bien
-     * un HR Staff authentifié.
+     * authorize() : l'accès est contrôlé par auth:sanctum sur la route,
+     * pas ici. Retourne true car seuls les HR authentifiés atteignent ce point.
      */
     public function authorize(): bool
     {

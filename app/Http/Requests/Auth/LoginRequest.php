@@ -4,6 +4,10 @@ namespace App\Http\Requests\Auth;
 
 use Illuminate\Foundation\Http\FormRequest;
 
+/**
+ * MISSION : valider les identifiants avant AuthController@login.
+ * Route publique — pas de token requis.
+ */
 class LoginRequest extends FormRequest
 {
     /**

@@ -3,7 +3,10 @@
 namespace App\Enums;
 
 /**
- * Cycle de vie d'une analyse de CV.
+ * MISSION : typage fort du cycle de vie d'une analyse CV.
+ *
+ * pending → processing → completed
+ *                      ↘ failed (après erreur FastAPI ou retries épuisés)
  */
 enum AnalysisStatus: string
 {

@@ -5,6 +5,9 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * MISSION : formater le profil HR Staff en JSON sûr (sans password).
+ */
 class UserResource extends JsonResource
 {
     /**

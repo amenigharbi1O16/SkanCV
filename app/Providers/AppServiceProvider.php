@@ -7,11 +7,14 @@ use App\Services\FastApi\FastApiClientInterface;
 use App\Services\FastApi\RealFastApiClient;
 use Illuminate\Support\ServiceProvider;
 
+/**
+ * MISSION : configuration globale de l'application.
+ *
+ * Seul endroit où FakeFastApiClient et RealFastApiClient sont mentionnés
+ * ensemble — le reste du code demande FastApiClientInterface au conteneur.
+ */
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
         $this->app->bind(FastApiClientInterface::class, function () {
@@ -22,9 +25,6 @@ class AppServiceProvider extends ServiceProvider
         });
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
         //

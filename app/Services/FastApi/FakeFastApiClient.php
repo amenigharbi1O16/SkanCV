@@ -2,8 +2,15 @@
 
 namespace App\Services\FastApi;
 
+/**
+ * MISSION : simuler FastAPI en dev/test sans microservice Python.
+ *
+ * Activé quand FASTAPI_MODE=fake. Retourne des données réalistes avec
+ * une vraie intersection de skills pour valider le pipeline Laravel.
+ */
 class FakeFastApiClient implements FastApiClientInterface
 {
+    /** Simule POST /extract — pas de lecture PDF réelle. */
     public function extract(string $filePath): array
     {
         return [
@@ -13,6 +20,7 @@ class FakeFastApiClient implements FastApiClientInterface
         ];
     }
 
+    /** Simule POST /score — intersection simple (sans embeddings). */
     public function score(array $cvSkills, array $requiredSkills): array
     {
         $matching = array_values(array_intersect($cvSkills, $requiredSkills));

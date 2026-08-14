@@ -7,6 +7,8 @@ use App\Models\JobPosting;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
+ * MISSION : générer des CVs de test sans upload PDF réel.
+ *
  * @extends Factory<Cv>
  */
 class CvFactory extends Factory

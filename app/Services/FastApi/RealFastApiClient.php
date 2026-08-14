@@ -7,12 +7,21 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 
+/**
+ * MISSION : appeler le microservice FastAPI réel via HTTP.
+ *
+ * Activé quand FASTAPI_MODE=real. Envoie le PDF en multipart à /extract
+ * et les skills en JSON à /score. Les timeouts évitent de bloquer le worker.
+ */
 class RealFastApiClient implements FastApiClientInterface
 {
     public function __construct(private readonly string $baseUrl)
     {
     }
 
+    /**
+     * POST /extract — envoie le PDF binaire (aligné avec UploadFile côté FastAPI).
+     */
     public function extract(string $filePath): array
     {
         $fullPath = Storage::disk('local')->path($filePath);
@@ -36,6 +45,9 @@ class RealFastApiClient implements FastApiClientInterface
         return $response->json();
     }
 
+    /**
+     * POST /score — envoie cv_skills et required_skills en JSON.
+     */
     public function score(array $cvSkills, array $requiredSkills): array
     {
         try {
