@@ -27,6 +27,7 @@ services:
             - meilisearch
             - mailpit
             - selenium
+            - fastapi
     mysql:
         image: 'mysql:8.4'
         ports:
@@ -100,6 +101,14 @@ services:
             - 'host.docker.internal:host-gateway'
         volumes:
             - '/dev/shm:/dev/shm'
+        networks:
+            - sail
+    fastapi:
+        build: ./fastapi-service
+        ports:
+            - '${FORWARD_FASTAPI_PORT:-8000}:8000'
+        volumes:
+            - './storage/app/private:/var/www/storage:ro'
         networks:
             - sail
 networks:

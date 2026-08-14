@@ -1,20 +1,20 @@
+"""
+Route POST /score — similarité sémantique CV vs offre d'emploi.
+
+MISSION : calculer le score de matching et une justification structurée
+pour le HR Staff, consommé par ProcessCvAnalysis via RealFastApiClient.
+"""
+
 from fastapi import APIRouter
-from app.models.schemas import ScoreRequest
+
+from app.models.schemas import ScoreRequest, ScoreResponse
+from app.services.scorer import score_skills
 
 router = APIRouter()
 
 
-@router.post("/score")
-def score(payload: ScoreRequest):
-    matching = [s for s in payload.cv_skills if s in payload.required_skills]
-    missing = [s for s in payload.required_skills if s not in payload.cv_skills]
-    score_value = (
-        round(len(matching) / len(payload.required_skills), 4)
-        if payload.required_skills else 0.0
-    )
-    return {
-        "score": score_value,
-        "justification": f"[STUB] {len(matching)}/{len(payload.required_skills)} compétences matchées.",
-        "matching_skills": matching,
-        "missing_skills": missing,
-    }
+@router.post("/score", response_model=ScoreResponse)
+def score(payload: ScoreRequest) -> ScoreResponse:
+    result = score_skills(payload.cv_skills, payload.required_skills)
+
+    return ScoreResponse(**result)
