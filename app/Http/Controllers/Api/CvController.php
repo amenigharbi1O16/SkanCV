@@ -10,6 +10,7 @@ use App\Jobs\ProcessCvAnalysis;
 use App\Models\Analysis;
 use App\Models\Cv;
 use App\Models\JobPosting;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
 
@@ -21,11 +22,22 @@ class CvController extends Controller
      * with('analysis') évite le N+1 : sans ça, chaque CV déclencherait
      * une requête SQL séparée pour vérifier s'il a une analyse.
      */
-    public function index(JobPosting $jobPosting)
+    public function index(Request $request, JobPosting $jobPosting)
     {
-        $cvs = $jobPosting->cvs()->with('analysis')->latest()->get();
+        $query = $jobPosting->cvs()->with('analysis');
 
-        return CvResource::collection($cvs);
+        if ($request->query('sort') === 'score') {
+            $direction = $request->query('order', 'desc') === 'asc' ? 'asc' : 'desc';
+
+            $query->leftJoin('analyses', 'cvs.id', '=', 'analyses.cv_id')
+                ->orderByRaw('analyses.similarity_score IS NULL')
+                ->orderBy('analyses.similarity_score', $direction)
+                ->select('cvs.*');
+        } else {
+            $query->latest();
+        }
+
+        return CvResource::collection($query->get());
     }
 
     /**

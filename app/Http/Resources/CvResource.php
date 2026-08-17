@@ -24,6 +24,9 @@ class CvResource extends JsonResource
             'analysis_status'   => $this->whenLoaded('analysis', fn () =>
                 $this->analysis?->status?->value
             ),
+            'similarity_score'  => $this->whenLoaded('analysis', fn () =>
+                $this->analysis?->similarity_score
+            ),
             'created_at'        => $this->created_at->toIso8601String(),
         ];
     }
