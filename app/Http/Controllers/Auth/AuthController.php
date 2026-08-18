@@ -7,8 +7,6 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -16,7 +14,7 @@ class AuthController extends Controller
     /**
      * POST /api/register
      * MISSION : créer un compte HR Staff et retourner immédiatement
-     * un token d'accès, pour que le frontend puisse enchaîner sans
+     * un token JWT, pour que le frontend puisse enchaîner sans
      * repasser par /login juste après l'inscription.
      */
     public function register(RegisterRequest $request)
@@ -27,54 +25,51 @@ class AuthController extends Controller
             'password' => $request->validated('password'),
         ]);
 
-        // createToken() vient de HasApiTokens (Sanctum) sur le modèle User.
-        // Le nom "api-token" est arbitraire, sert juste à identifier le
-        // token dans la table personal_access_tokens (colonne "name").
-        $token = $user->createToken('api-token')->plainTextToken;
+        $token = auth('api')->login($user);
 
-        return response()->json([
-            'user'  => new UserResource($user),
-            'token' => $token,
-        ], 201);
+        return $this->respondWithToken($user, $token, 201);
     }
 
     /**
      * POST /api/login
-     * MISSION : vérifier les identifiants et émettre un nouveau token.
-     * Sanctum autorise plusieurs tokens actifs par utilisateur en
-     * parallèle (multi-appareils) : on ne révoque pas les anciens ici.
+     * MISSION : vérifier les identifiants et émettre un nouveau token JWT.
      */
     public function login(LoginRequest $request)
     {
-        $user = User::where('email', $request->validated('email'))->first();
+        $credentials = [
+            'email'    => $request->validated('email'),
+            'password' => $request->validated('password'),
+        ];
 
-        if (! $user || ! Hash::check($request->validated('password'), $user->password)) {
-            // ValidationException produit une 422 avec le même format
-            // que les erreurs de validation classiques, cohérent avec
-            // le reste de l'API (JobPosting/Cv/Analysis en 422 aussi).
+        if (! $token = auth('api')->attempt($credentials)) {
             throw ValidationException::withMessages([
                 'email' => ['Identifiants incorrects.'],
             ]);
         }
 
-        $token = $user->createToken('api-token')->plainTextToken;
-
-        return response()->json([
-            'user'  => new UserResource($user),
-            'token' => $token,
-        ]);
+        return $this->respondWithToken(auth('api')->user(), $token);
     }
 
     /**
      * POST /api/logout
-     * MISSION : révoquer UNIQUEMENT le token utilisé pour cette requête,
-     * pas tous les tokens de l'utilisateur (sinon on déconnecterait
-     * ses autres sessions/appareils sans qu'il l'ait demandé).
+     * MISSION : invalider (blacklist) le token JWT utilisé pour cette requête.
      */
-    public function logout(Request $request)
+    public function logout()
     {
-        $request->user()->currentAccessToken()->delete();
+        auth('api')->logout();
 
         return response()->noContent();
+    }
+
+    /**
+     * Réponse standard user + token, cohérente avec le format
+     * déjà utilisé par register/login.
+     */
+    protected function respondWithToken(User $user, string $token, int $status = 200)
+    {
+        return response()->json([
+            'user'  => new UserResource($user),
+            'token' => $token,
+        ], $status);
     }
 }
