@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\Route;
 
 /**
  * MISSION : table de routage API SkanCV.
- * Toutes les routes sont préfixées /api (bootstrap/app.php).
  * Routes publiques : register/login. Tout le reste : auth:api (JWT).
  */
 
