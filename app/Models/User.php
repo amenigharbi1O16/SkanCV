@@ -8,7 +8,7 @@ use Illuminate\Notifications\Notifiable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
 /**
- * MISSION : compte HR Staff authentifiable via JWT (JWTSubject).
+ * MISSION : compte HR Staff authentifiable via JWT (tymon/jwt-auth).
  * Seul acteur du système — crée offres, uploade CVs, consulte analyses.
  */
 class User extends Authenticatable implements JWTSubject
@@ -34,12 +34,12 @@ class User extends Authenticatable implements JWTSubject
         ];
     }
 
-    public function getJWTIdentifier()
+    public function getJWTIdentifier(): mixed
     {
         return $this->getKey();
     }
 
-    public function getJWTCustomClaims()
+    public function getJWTCustomClaims(): array
     {
         return [];
     }
