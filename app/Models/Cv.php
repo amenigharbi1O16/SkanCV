@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-
+use App\Models\User;
 /**
  * MISSION : représenter un CV candidat uploadé pour une offre.
  *
@@ -19,6 +19,7 @@ class Cv extends Model
 
     protected $fillable = [
         'job_posting_id',
+        'uploaded_by',
         'candidate_name',
         'candidate_email',
         'file_path',
@@ -47,5 +48,10 @@ class Cv extends Model
     public function analysis(): HasOne
     {
         return $this->hasOne(Analysis::class);
+    }
+    // Chaque CV connaît maintenant son propriétaire (celui qui l'a uploadé)
+    public function uploader()
+    {
+        return $this->belongsTo(User::class, 'uploaded_by');
     }
 }
