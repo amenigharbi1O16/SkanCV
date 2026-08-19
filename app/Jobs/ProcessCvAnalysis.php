@@ -13,6 +13,7 @@ use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
+use App\Notifications\AnalysisFailedNotification;
 use Throwable;
 
 /**
@@ -102,16 +103,22 @@ class ProcessCvAnalysis implements ShouldQueue
         }
     }
 
-    /** Appelé par Laravel après épuisement des $tries tentatives. */
-    public function failed(Throwable $exception): void
+    /**
+ * Appelé automatiquement par Laravel quand le job échoue définitivement
+ * (après épuisement des tentatives de retry configurées).
+ */
+    public function failed(\Throwable $exception): void
     {
-        $this->cv->analysis()?->update([
-            'status' => AnalysisStatus::FAILED,
-        ]);
+        $this->cv->analysis()->update(['status' => AnalysisStatus::FAILED]);
 
-        Log::critical('Analyse CV définitivement échouée', [
+        // Notifie le HR qui a uploadé ce CV, s'il est connu
+        if ($this->cv->uploader) {
+            $this->cv->uploader->notify(new AnalysisFailedNotification($this->cv));
+        }
+
+        Log::error('Analyse CV échouée', [
             'cv_id' => $this->cv->id,
-            'exception' => $exception->getMessage(),
+            'error' => $exception->getMessage(),
         ]);
     }
 }
