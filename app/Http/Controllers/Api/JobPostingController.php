@@ -21,9 +21,9 @@ class JobPostingController extends Controller
     {
         $jobPostings = JobPosting::all();
 
-        return response()->json(
-            JobPostingResource::collection($jobPostings)
-        );
+        // ->response() déclenche le pipeline complet de transformation
+        // Laravel, qui applique le wrapping standard { "data": [...] }.
+        return JobPostingResource::collection($jobPostings)->response();
     }
 
     /** POST /api/job-postings — crée une offre avec required_skills (JSON array). */
