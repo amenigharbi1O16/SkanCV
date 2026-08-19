@@ -14,8 +14,7 @@ class AuthController extends Controller
     /**
      * POST /api/register
      * MISSION : créer un compte HR Staff et retourner immédiatement
-     * un token JWT, pour que le frontend puisse enchaîner sans
-     * repasser par /login juste après l'inscription.
+     * un token JWT.
      */
     public function register(RegisterRequest $request)
     {
@@ -27,19 +26,18 @@ class AuthController extends Controller
 
         $token = auth('api')->login($user);
 
-        return $this->respondWithToken($user, $token, 201);
+        return $this->respondWithToken($token, $user, 201);
     }
 
     /**
      * POST /api/login
-     * MISSION : vérifier les identifiants et émettre un nouveau token JWT.
+     * MISSION : vérifier les identifiants et émettre un JWT.
+     * Renvoie 422 pour rester cohérent avec le format d'erreur de
+     * validation utilisé sur le reste de l'API.
      */
     public function login(LoginRequest $request)
     {
-        $credentials = [
-            'email'    => $request->validated('email'),
-            'password' => $request->validated('password'),
-        ];
+        $credentials = $request->validated();
 
         if (! $token = auth('api')->attempt($credentials)) {
             throw ValidationException::withMessages([
@@ -47,29 +45,27 @@ class AuthController extends Controller
             ]);
         }
 
-        return $this->respondWithToken(auth('api')->user(), $token);
+        return $this->respondWithToken($token, auth('api')->user());
     }
 
     /**
      * POST /api/logout
-     * MISSION : invalider (blacklist) le token JWT utilisé pour cette requête.
+     * MISSION : invalider (blacklister) le token JWT courant.
      */
     public function logout()
     {
         auth('api')->logout();
 
-        return response()->noContent();
+        return response()->noContent(); // 204
     }
 
-    /**
-     * Réponse standard user + token, cohérente avec le format
-     * déjà utilisé par register/login.
-     */
-    protected function respondWithToken(User $user, string $token, int $status = 200)
+    private function respondWithToken(string $token, User $user, int $status = 200)
     {
         return response()->json([
-            'user'  => new UserResource($user),
-            'token' => $token,
+            'user'         => new UserResource($user),
+            'access_token' => $token,
+            'token_type'   => 'bearer',
+            'expires_in'   => auth('api')->factory()->getTTL() * 60,
         ], $status);
     }
 }
