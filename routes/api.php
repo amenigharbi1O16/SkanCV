@@ -9,15 +9,14 @@ use Illuminate\Support\Facades\Route;
 
 /**
  * MISSION : table de routage API SkanCV.
- * Toutes les routes sont préfixées /api (bootstrap/app.php).
- * Routes publiques : register/login. Tout le reste : auth:sanctum.
+ * Routes publiques : register/login. Tout le reste : auth:api (JWT).
  */
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login'])
     ->middleware('throttle:5,1');
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware('auth:api')->group(function () {
 
     Route::post('/logout', [AuthController::class, 'logout']);
 
@@ -29,7 +28,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/analyses', [AnalysisController::class, 'index'])
         ->name('analyses.index');
-
+    Route::post('job-postings/{jobPosting}/cvs/batch', [CvController::class, 'storeBatch'])
+        ->middleware('auth:api');
     Route::apiResource('job-postings', JobPostingController::class);
 
     Route::apiResource('job-postings.cvs', CvController::class)

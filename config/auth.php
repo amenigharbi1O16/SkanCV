@@ -16,7 +16,7 @@ return [
     */
 
     'defaults' => [
-        'guard' => env('AUTH_GUARD', 'web'),
+        'guard' => env('AUTH_GUARD', 'api'),
         'passwords' => env('AUTH_PASSWORD_BROKER', 'users'),
     ],
 
@@ -40,6 +40,14 @@ return [
     'guards' => [
         'web' => [
             'driver' => 'session',
+            'provider' => 'users',
+        ],
+
+    // Guard API : c'est CE guard que auth:api dans les routes va utiliser.
+    // driver 'jwt' vient de tymon/jwt-auth (enregistré automatiquement
+    // par le package via auto-discovery).
+        'api' => [
+            'driver' => 'jwt',
             'provider' => 'users',
         ],
     ],

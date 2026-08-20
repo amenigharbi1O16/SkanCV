@@ -6,11 +6,6 @@ use App\Models\Cv;
 use App\Models\JobPosting;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * MISSION : générer des CVs de test sans upload PDF réel.
- *
- * @extends Factory<Cv>
- */
 class CvFactory extends Factory
 {
     protected $model = Cv::class;
@@ -19,11 +14,9 @@ class CvFactory extends Factory
     {
         return [
             'job_posting_id' => JobPosting::factory(),
-            'candidate_name' => fake()->name(),
-            'candidate_email' => fake()->safeEmail(),
-            'file_path' => 'cvs/'.fake()->uuid().'.pdf',
-            'extracted_text' => null,
-            'extracted_skills' => null,
+            'candidate_name' => $this->faker->name(),
+            'candidate_email' => $this->faker->unique()->safeEmail(),
+            'file_path' => 'cvs/' . $this->faker->uuid() . '.pdf',
         ];
     }
 }

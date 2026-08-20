@@ -5,11 +5,6 @@ namespace Database\Factories;
 use App\Models\JobPosting;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * MISSION : générer des offres d'emploi réalistes pour les tests automatisés.
- *
- * @extends Factory<JobPosting>
- */
 class JobPostingFactory extends Factory
 {
     protected $model = JobPosting::class;
@@ -17,9 +12,14 @@ class JobPostingFactory extends Factory
     public function definition(): array
     {
         return [
-            'title' => fake()->jobTitle(),
-            'description' => fake()->paragraph(),
-            'required_skills' => ['PHP', 'Laravel', 'React'],
+            // Titre réaliste pour les tests de recherche/filtrage
+            'title' => $this->faker->jobTitle(),
+            'description' => $this->faker->paragraph(3),
+            // Liste de compétences requises, stockée en JSON dans la table
+            'required_skills' => $this->faker->randomElements(
+                ['PHP', 'Laravel', 'React', 'Python', 'Docker', 'MySQL'],
+                3
+            ),
         ];
     }
 }
