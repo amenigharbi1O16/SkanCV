@@ -28,7 +28,8 @@ Route::middleware('auth:api')->group(function () {
 
     Route::get('/analyses', [AnalysisController::class, 'index'])
         ->name('analyses.index');
-
+    Route::post('job-postings/{jobPosting}/cvs/batch', [CvController::class, 'storeBatch'])
+        ->middleware('auth:api');
     Route::apiResource('job-postings', JobPostingController::class);
 
     Route::apiResource('job-postings.cvs', CvController::class)
