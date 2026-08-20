@@ -13,7 +13,8 @@ use App\Models\JobPosting;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
-
+use App\Http\Requests\StoreCvBatchRequest;
+use Illuminate\Support\Facades\DB;
 class CvController extends Controller
 {
     /**
@@ -94,5 +95,54 @@ class CvController extends Controller
         $cv->delete();
 
         return response()->noContent();
+    }
+
+    /**
+    * Upload multiple CVs pour une même offre en un seul appel.
+    * Réutilise exactement la même logique que store() mais en boucle,
+    * dans une transaction pour garantir l'atomicité (soit tout est créé, soit rien).
+    */
+    public function storeBatch(StoreCvBatchRequest $request, JobPosting $jobPosting)
+    {
+        $files = $request->file('files');
+        $names = $request->input('candidate_names', []);
+
+        $createdCvs = [];
+
+        // DB::transaction : si un insert échoue au milieu de la boucle,
+        // tout est annulé plutôt que de laisser une offre à moitié traitée
+        DB::transaction(function () use ($files, $names, $jobPosting, &$createdCvs) {
+            foreach ($files as $index => $file) {
+                // Stockage physique du PDF, même pattern que l'upload simple
+                $path = $file->store('cvs', 'local');
+
+                $cv = Cv::create([
+                    'job_posting_id' => $jobPosting->id,
+                    'candidate_name' => $names[$index] ?? pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),
+                    'file_path' => $path,
+                    'original_filename' => $file->getClientOriginalName(),
+                ]);
+
+                // Analysis créée immédiatement en PENDING, comme pour l'upload simple :
+                // le frontend doit toujours pouvoir afficher un état "en cours" dès l'upload
+                Analysis::create([
+                    'cv_id' => $cv->id,
+                    'status' => 'PENDING',
+                ]);
+
+                $createdCvs[] = $cv;
+            }
+        });
+
+        // Les jobs sont dispatchés APRÈS le commit de la transaction,
+        // sinon un job pourrait démarrer avant que la ligne DB soit visible (race condition)
+        foreach ($createdCvs as $cv) {
+            ProcessCvAnalysis::dispatch($cv);
+        }
+
+        return response()->json([
+            'message' => count($createdCvs) . ' CVs mis en file d\'attente pour analyse.',
+            'cvs' => $createdCvs,
+        ], 201);
     }
 }
