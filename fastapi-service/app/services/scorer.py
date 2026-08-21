@@ -1,27 +1,53 @@
 """
 Calcul du score de similarité sémantique entre compétences CV et offre.
 
-MISSION : produire un score 0-1 plus intelligent qu'une simple intersection
-de chaînes. Exemple réel : "ReactJS" sur le CV vs "React" sur l'offre —
-les embeddings capturent la proximité sémantique.
+MISSION :
+Produire un score 0-1 plus intelligent qu'une simple intersection de chaînes.
+Le modèle NER extrait les skills ; CE fichier mesure à quel point elles
+matchent l'offre d'emploi.
 
-Pourquoi all-MiniLM-L6-v2 : léger (~80 Mo), gratuit, local, pas de clé API.
-Alternative rejetée : GPT-4 API (coût, latence, dépendance externe).
+RELATION :
+- Appelé par routers/score.py (POST /score)
+- Reçoit les skills extraites par skill_extractor.py (via Laravel ProcessCvAnalysis)
+- Utilise sentence-transformers (PAS le modèle NER — tâche différente)
+
+Exemple réel :
+  CV skills     : ["Python", "FastAPI", "Docker", "PostgreSQL"]
+  Offre skills  : ["Python", "Django", "AWS"]
+  → matching exact : ["Python"]
+  → missing      : ["Django", "AWS"]
+  → score sémantique ~0.75 car "FastAPI" est proche de "Django" en embedding
+
+Pourquoi all-MiniLM-L6-v2 :
+  Léger (~80 Mo), gratuit, local, pas de clé API OpenAI.
 """
 
 from functools import lru_cache
 
 from sentence_transformers import SentenceTransformer, util
 
+from app.config import settings
+
 
 @lru_cache(maxsize=1)
 def get_embedding_model() -> SentenceTransformer:
-    """Charge le modèle une seule fois au premier appel (singleton)."""
-    return SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+    """
+    Singleton : charge le modèle d'embeddings une seule fois au démarrage.
+
+    Pré-chargé dans main.py (lifespan) pour éviter le cold start à la
+    première requête /score.
+    """
+    return SentenceTransformer(settings.embedding_model_name)
 
 
 def compute_similarity_score(cv_skills: list[str], required_skills: list[str]) -> float:
-    """Similarité cosinus entre les embeddings des deux listes de compétences."""
+    """
+    Similarité cosinus entre les embeddings des deux listes de compétences.
+
+    On joint les skills en une seule phrase par côté, puis on encode.
+    C'est une approximation rapide — une alternative serait d'encoder
+    chaque skill individuellement et faire un matching pairwise.
+    """
     if not cv_skills or not required_skills:
         return 0.0
 
@@ -44,7 +70,7 @@ def build_justification(
     cv_skills: list[str],
     required_skills: list[str],
 ) -> str:
-    """Génère une justification lisible pour le HR Staff."""
+    """Génère une justification lisible affichée au HR Staff dans SkanCV."""
     return (
         f"Score de similarité sémantique : {score:.0%}. "
         f"Compétences requises : {len(required_skills)}. "
@@ -55,7 +81,12 @@ def build_justification(
 
 
 def score_skills(cv_skills: list[str], required_skills: list[str]) -> dict:
-    """Orchestre scoring embedding + intersection pour matching/missing lisibles."""
+    """
+    Orchestre scoring embedding + intersection pour matching/missing lisibles.
+
+    Returns:
+        dict compatible avec ScoreResponse (schemas.py) et Laravel ProcessCvAnalysis.
+    """
     matching = sorted(set(cv_skills) & set(required_skills), key=str.lower)
     missing = sorted(set(required_skills) - set(cv_skills), key=str.lower)
     score = compute_similarity_score(cv_skills, required_skills)

@@ -1,16 +1,37 @@
 """
 Extraction de texte brut depuis un PDF CV.
 
-MISSION : lire le contenu textuel d'un PDF uploadé par Laravel.
-Pourquoi PyMuPDF (fitz) et pas Tesseract OCR : les CVs SkanCV sont des PDFs
-texte natifs ; l'OCR serait plus lourd et inutile pour le MVP.
+MISSION :
+Transformer le fichier PDF binaire (envoyé par Laravel via multipart) en
+texte brut que le modèle NER pourra analyser.
+
+RELATION :
+- Appelé par routers/extract.py (étape 1 du pipeline /extract)
+- Sa sortie alimente skill_extractor.py (étape 2) et guess_candidate_name()
+
+Pourquoi PyMuPDF (fitz) et pas Tesseract OCR :
+Les CV SkanCV sont des PDFs texte natifs (export Word/LaTeX). L'OCR serait
+plus lourd, plus lent et inutile pour le MVP.
+
+Exemple réel :
+  HR upload "cv_marie_dupont.pdf"
+  → extract_text_from_pdf() retourne :
+    "Marie Dupont\nmarie@email.com\nCompétences : Python, Laravel..."
 """
 
 import fitz
 
 
 def extract_text_from_pdf(pdf_bytes: bytes) -> str:
-    """Extrait le texte de toutes les pages d'un PDF."""
+    """
+    Extrait le texte de toutes les pages d'un PDF.
+
+    Args:
+        pdf_bytes: contenu binaire du PDF (lu depuis UploadFile par la route)
+
+    Returns:
+        Texte concaténé de toutes les pages, ou chaîne vide si illisible.
+    """
     document = fitz.open(stream=pdf_bytes, filetype="pdf")
     pages_text = [page.get_text() for page in document]
     document.close()
@@ -20,8 +41,14 @@ def extract_text_from_pdf(pdf_bytes: bytes) -> str:
 
 def guess_candidate_name(text: str) -> str | None:
     """
-    Heuristique MVP : la première ligne non vide ressemble souvent au nom du candidat.
-    Exemple réel : "Jean Dupont" en tête du CV avant l'email ou l'adresse.
+    Heuristique MVP : la première ligne non vide ressemble souvent au nom.
+
+    Exemple réel sur un CV tunisien :
+      "Ahmed Ben Salah"
+      "ahmed.bensalah@gmail.com"
+      → retourne "Ahmed Ben Salah"
+
+    On ignore les lignes avec @, http ou chiffres (email, URL, téléphone).
     """
     for line in text.splitlines():
         cleaned = line.strip()

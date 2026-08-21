@@ -107,8 +107,15 @@ services:
         build: ./fastapi-service
         ports:
             - '${FORWARD_FASTAPI_PORT:-8000}:8000'
+        env_file:
+            - ./fastapi-service/.env
+        environment:
+            HF_HUB_DOWNLOAD_TIMEOUT: '600'
         volumes:
             - './storage/app/private:/var/www/storage:ro'
+            - './fastapi-service/app:/app/app'
+            - './fastapi-service/tests:/app/tests'
+            - 'huggingface-cache:/root/.cache/huggingface'
         networks:
             - sail
 networks:
@@ -120,4 +127,6 @@ volumes:
     sail-redis:
         driver: local
     sail-meilisearch:
+        driver: local
+    huggingface-cache:
         driver: local
