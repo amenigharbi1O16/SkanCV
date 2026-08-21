@@ -29,3 +29,6 @@ test.pdf
 test-valid.pdf
 test.png
 .kilocode/
+__pycache__/
+*.pyc
+fastapi-service/**/__pycache__/
