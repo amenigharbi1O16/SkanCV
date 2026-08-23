@@ -1,10 +1,15 @@
 """
-SkillExtractor — Extraction de compétences via modèle NER pré-entraîné (Option A).
+SkillExtractor — Extraction de compétences via GLiNER (zero-shot NER).
 
 MISSION :
-Remplace l'ancienne approche lexicon-based (KNOWN_SKILLS + regex).
-Un modèle BERT/XLM-R fine-tuné sur SkillSpan lit le texte et repère
-lui-même les compétences, y compris celles absentes de toute liste fixe.
+Remplace jjzha/escoxlmr_skill_extraction, qui ne renvoyait que des spans
+génériques de type BIO ("developing", "web applications") au lieu de noms
+de technologies précis, et ne généralisait pas au français malgré sa base
+multilingue (fine-tuné uniquement sur SkillSpan, un dataset anglais).
+
+GLiNER résout les deux problèmes : les labels (programming language,
+framework, etc.) sont passés à l'inférence (zero-shot, pas de fine-tuning
+figé), et le modèle multilingue généralise correctement au FR/EN mixte.
 
 RELATION :
 - Reçoit le texte brut depuis pdf_extractor.py
@@ -14,15 +19,12 @@ RELATION :
 Exemple réel :
   Texte CV : "3 ans d'expérience en développement Laravel et React Native"
   → extract_skill_names() retourne : ["Laravel", "React Native"]
-  (même si "React Native" n'était pas dans l'ancienne liste KNOWN_SKILLS)
 """
 
 import logging
 import re
 from functools import lru_cache
 from typing import Dict, List, Protocol
-
-from transformers import Pipeline, pipeline
 
 from app.config import settings
 
@@ -41,20 +43,22 @@ class SkillExtractorProtocol(Protocol):
 
 class SkillExtractor:
     """
-    Wrapper autour du pipeline HuggingFace token-classification.
+    Wrapper autour de GLiNER (zero-shot NER).
 
-    Le modèle travaille au niveau sous-mot (subword). Le paramètre
-    aggregation_strategy="simple" recombine automatiquement les tokens
-    en entités complètes ("Kubernetes" au lieu de "Kuber" + "##netes").
+    Contrairement à transformers.pipeline (token-classification classique),
+    GLiNER prend le texte ET la liste de labels à chaque appel predict_entities().
+    C'est ce qui permet de définir des catégories précises (programming
+    language, framework...) sans réentraîner ni fine-tuner un modèle.
 
     IMPORTANT : instancié UNE SEULE FOIS via get_skill_extractor() —
-    le chargement prend 5-15 secondes et ~1 Go RAM (XLM-RoBERTa).
+    le chargement prend plusieurs secondes et plusieurs centaines de Mo RAM.
     """
 
     def __init__(
         self,
         model_name: str | None = None,
         confidence_threshold: float | None = None,
+        labels: List[str] | None = None,
     ):
         self.model_name = model_name or settings.skill_model_name
         self.confidence_threshold = (
@@ -62,14 +66,15 @@ class SkillExtractor:
             if confidence_threshold is not None
             else settings.skill_confidence_threshold
         )
+        self.labels = labels or [
+            label.strip() for label in settings.skill_labels.split(",") if label.strip()
+        ]
 
-        logger.info("[SkillExtractor] Chargement du modèle NER: %s", self.model_name)
-        self._pipe: Pipeline = pipeline(
-            task="token-classification",
-            model=self.model_name,
-            aggregation_strategy="simple",
-        )
-        logger.info("[SkillExtractor] Modèle chargé avec succès.")
+        logger.info("[SkillExtractor] Chargement du modèle GLiNER: %s", self.model_name)
+        from gliner import GLiNER
+
+        self._model = GLiNER.from_pretrained(self.model_name)
+        logger.info("[SkillExtractor] Modèle chargé avec succès. Labels: %s", self.labels)
 
     def extract(self, text: str) -> List[Dict]:
         """
@@ -81,7 +86,9 @@ class SkillExtractor:
         if not text or not text.strip():
             return []
 
-        raw_entities = self._pipe(text)
+        raw_entities = self._model.predict_entities(
+            text, self.labels, threshold=self.confidence_threshold
+        )
 
         results: List[Dict] = []
         for entity in raw_entities:
@@ -89,7 +96,7 @@ class SkillExtractor:
             if score < self.confidence_threshold:
                 continue
 
-            skill_text = self._clean_entity_text(entity.get("word", ""))
+            skill_text = self._clean_entity_text(entity.get("text", ""))
             if not skill_text:
                 continue
 
@@ -109,13 +116,8 @@ class SkillExtractor:
 
     @staticmethod
     def _clean_entity_text(raw: str) -> str:
-        """
-        Nettoie les artefacts de tokenization subword.
-
-        Exemple : "React Nat ive" (mal recombiné) → "React Native"
-        """
-        cleaned = raw.replace("##", "")
-        cleaned = re.sub(r"\s+", " ", cleaned).strip()
+        """Nettoie les espaces superflus autour du span extrait."""
+        cleaned = re.sub(r"\s+", " ", raw).strip()
 
         if len(cleaned) < 2:
             return ""
@@ -143,8 +145,8 @@ def get_skill_extractor() -> SkillExtractor:
     """
     Factory singleton — injectée dans FastAPI via Depends().
 
-    SKILL_EXTRACTOR_MODE=fake → FakeSkillExtractor (tests/dev, pas de HuggingFace)
-    SKILL_EXTRACTOR_MODE=real → vrai modèle NER (production)
+    SKILL_EXTRACTOR_MODE=fake → FakeSkillExtractor (tests/dev, pas de modèle chargé)
+    SKILL_EXTRACTOR_MODE=real → GLiNER (production)
     """
     from app.config import settings
     from app.services.fake_skill_extractor import FakeSkillExtractor
