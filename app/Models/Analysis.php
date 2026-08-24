@@ -16,6 +16,8 @@ class Analysis extends Model
         'status',
         'similarity_score',
         'justification',
+        'matching_skills',
+        'missing_skills',
         'analyzed_at',
     ];
 
@@ -24,6 +26,8 @@ class Analysis extends Model
         return [
             'status' => AnalysisStatus::class,
             'similarity_score' => 'decimal:4',
+            'matching_skills' => 'array',
+            'missing_skills' => 'array',
             'analyzed_at' => 'datetime',
         ];
     }
