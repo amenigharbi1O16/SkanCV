@@ -18,6 +18,8 @@ class AnalysisResource extends JsonResource
             'status'            => $this->status->value,
             'similarity_score'  => $this->similarity_score,
             'justification'     => $this->justification,
+            'matching_skills'   => $this->matching_skills ?? [],
+            'missing_skills'    => $this->missing_skills ?? [],
             'analyzed_at'       => $this->analyzed_at?->toIso8601String(),
             'candidate_name'    => $this->whenLoaded('cv', fn () => $this->cv?->candidate_name),
             'candidate_email'   => $this->whenLoaded('cv', fn () => $this->cv?->candidate_email),
