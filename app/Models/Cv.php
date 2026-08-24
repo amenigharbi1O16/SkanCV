@@ -49,8 +49,7 @@ class Cv extends Model
     {
         return $this->hasOne(Analysis::class);
     }
-    // Chaque CV connaît maintenant son propriétaire (celui qui l'a uploadé)
-    public function uploader()
+    public function uploader(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploaded_by');
     }
