@@ -10,6 +10,7 @@ use App\Jobs\ProcessCvAnalysis;
 use App\Models\Analysis;
 use App\Models\Cv;
 use App\Models\JobPosting;
+use App\Notifications\CvAnalysisStatusNotification;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
@@ -57,12 +58,16 @@ class CvController extends Controller
             'candidate_name'  => $request->validated('candidate_name'),
             'candidate_email' => $request->validated('candidate_email'),
             'file_path'       => $path,
+            'uploaded_by'     => $request->user()->id,
         ]);
 
-        Analysis::create([
+        $analysis = Analysis::create([
             'cv_id'  => $cv->id,
             'status' => AnalysisStatus::PENDING,
         ]);
+
+        // Notification in-app : le HR sait immédiatement que le CV est en file d'attente
+        $request->user()->notify(new CvAnalysisStatusNotification($analysis));
 
         ProcessCvAnalysis::dispatch($cv);
 
@@ -106,43 +111,52 @@ class CvController extends Controller
     {
         $files = $request->file('files');
         $names = $request->input('candidate_names', []);
+        $emails = $request->input('candidate_emails', []);
 
         $createdCvs = [];
 
-        // DB::transaction : si un insert échoue au milieu de la boucle,
-        // tout est annulé plutôt que de laisser une offre à moitié traitée
-        DB::transaction(function () use ($files, $names, $jobPosting, &$createdCvs) {
+        DB::transaction(function () use ($files, $names, $emails, $jobPosting, $request, &$createdCvs) {
             foreach ($files as $index => $file) {
-                // Stockage physique du PDF, même pattern que l'upload simple
                 $path = $file->store('cvs', 'local');
+
+                $candidateEmail = $emails[$index] ?? null;
+                if (empty($candidateEmail)) {
+                    $candidateEmail = 'batch-cv-'.uniqid().'@skancv.local';
+                }
 
                 $cv = Cv::create([
                     'job_posting_id' => $jobPosting->id,
+                    'uploaded_by' => $request->user()->id,
                     'candidate_name' => $names[$index] ?? pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),
+                    'candidate_email' => $candidateEmail,
                     'file_path' => $path,
-                    'original_filename' => $file->getClientOriginalName(),
                 ]);
 
-                // Analysis créée immédiatement en PENDING, comme pour l'upload simple :
-                // le frontend doit toujours pouvoir afficher un état "en cours" dès l'upload
                 Analysis::create([
                     'cv_id' => $cv->id,
-                    'status' => 'PENDING',
+                    'status' => AnalysisStatus::PENDING,
                 ]);
 
-                $createdCvs[] = $cv;
+                $createdCvs[] = $cv->fresh(['analysis']);
             }
         });
 
-        // Les jobs sont dispatchés APRÈS le commit de la transaction,
-        // sinon un job pourrait démarrer avant que la ligne DB soit visible (race condition)
+        $uploader = $request->user();
+        foreach ($createdCvs as $cv) {
+            if ($cv->analysis) {
+                $uploader->notify(new CvAnalysisStatusNotification($cv->analysis));
+            }
+        }
+
         foreach ($createdCvs as $cv) {
             ProcessCvAnalysis::dispatch($cv);
         }
 
-        return response()->json([
-            'message' => count($createdCvs) . ' CVs mis en file d\'attente pour analyse.',
-            'cvs' => $createdCvs,
-        ], 201);
+        return CvResource::collection(collect($createdCvs))
+            ->additional([
+                'message' => count($createdCvs).' CVs mis en file d\'attente pour analyse.',
+            ])
+            ->response()
+            ->setStatusCode(Response::HTTP_CREATED);
     }
 }
