@@ -2,6 +2,7 @@
 use App\Http\Controllers\Api\AnalysisController;
 use App\Http\Controllers\Api\CvController;
 use App\Http\Controllers\Api\JobPostingController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Auth\AuthController;
 use Illuminate\Support\Facades\Route;
@@ -30,6 +31,10 @@ Route::middleware('auth:api')->group(function () {
 
     Route::get('/analyses', [AnalysisController::class, 'index'])
         ->name('analyses.index');
+
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::get('/notifications/unread', [NotificationController::class, 'unread']);
+    Route::patch('/notifications/{notificationId}/read', [NotificationController::class, 'markAsRead']);
 
     Route::apiResource('job-postings', JobPostingController::class);
 
