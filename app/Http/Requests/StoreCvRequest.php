@@ -12,17 +12,19 @@ class StoreCvRequest extends FormRequest
     }
 
     /**
-     * MISSION : rejeter toute soumission incomplète ou dangereuse AVANT
-     * que le controller ne touche au disque ou à la base.
-     * On ne valide QUE candidate_name/candidate_email/file : extracted_text
-     * et extracted_skills ne sont jamais fournis par le client, ils sont
-     * remplis plus tard par le pipeline FastAPI côté serveur.
+     * MISSION : rejeter toute soumission dangereuse AVANT que le controller
+     * ne touche au disque ou à la base.
+     *
+     * candidate_name / candidate_email sont désormais optionnels côté client :
+     * le pipeline FastAPI /extract les remplit automatiquement depuis le PDF.
+     * Un placeholder est envoyé par le frontend ; le champ sera mis à jour
+     * après analyse IA.
      */
     public function rules(): array
     {
         return [
-            'candidate_name'  => ['required', 'string', 'max:255'],
-            'candidate_email' => ['required', 'email', 'max:255'],
+            'candidate_name'  => ['nullable', 'string', 'max:255'],
+            'candidate_email' => ['nullable', 'string', 'max:255'],
             'file' => [
                 'required',
                 'file',
@@ -35,9 +37,8 @@ class StoreCvRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'candidate_email.email' => 'L\'email fourni n\'est pas valide.',
-            'file.mimes'            => 'Le fichier doit être un PDF valide.',
-            'file.max'              => 'Le fichier ne doit pas dépasser 5 Mo.',
+            'file.mimes' => 'Le fichier doit être un PDF valide.',
+            'file.max'   => 'Le fichier ne doit pas dépasser 5 Mo.',
         ];
     }
 }

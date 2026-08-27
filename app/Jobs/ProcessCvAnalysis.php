@@ -3,8 +3,11 @@
 namespace App\Jobs;
 
 use App\Enums\AnalysisStatus;
+use App\Models\Analysis;
 use App\Models\Cv;
+use App\Notifications\CvAnalysisStatusNotification;
 use App\Services\FastApi\FastApiClientInterface;
+use App\Support\SkillNormalizer;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -18,7 +21,7 @@ use Throwable;
 /**
  * MISSION : orchestrer l'analyse IA d'un CV en arrière-plan.
  *
- * Déclenché par CvController@store après upload. Appelle FastApiClientInterface
+ * Déclenché par CvController après upload. Appelle FastApiClientInterface
  * (Fake ou Real selon .env), met à jour Analysis et Cv sans bloquer le HR.
  */
 class ProcessCvAnalysis implements ShouldQueue
@@ -48,8 +51,7 @@ class ProcessCvAnalysis implements ShouldQueue
     }
 
     /**
-     * Flux : PROCESSING → extract → score → COMPLETED (ou FAILED si erreur).
-     * FastApiClientInterface est injecté automatiquement par Laravel.
+     * Flux : PROCESSING → extract → score → COMPLETED (ou FAILED si échec définitif).
      */
     public function handle(FastApiClientInterface $fastApi): void
     {
@@ -62,6 +64,7 @@ class ProcessCvAnalysis implements ShouldQueue
         }
 
         $analysis->update(['status' => AnalysisStatus::PROCESSING]);
+        $this->notifyUploader($analysis->fresh());
 
         try {
             if (! empty($this->cv->extracted_skills)) {
@@ -73,45 +76,73 @@ class ProcessCvAnalysis implements ShouldQueue
             } else {
                 $extraction = $fastApi->extract($this->cv->file_path);
 
-                $this->cv->update([
+                $cvUpdates = [
                     'extracted_text' => $extraction['text'],
                     'extracted_skills' => $extraction['skills'],
-                ]);
+                ];
+
+                if (! empty($extraction['candidate_name'])) {
+                    $cvUpdates['candidate_name'] = $extraction['candidate_name'];
+                }
+
+                $this->cv->update($cvUpdates);
             }
+
+            $requiredSkills = SkillNormalizer::normalize(
+                $this->cv->jobPosting->required_skills ?? []
+            );
 
             $result = $fastApi->score(
                 $extraction['skills'],
-                $this->cv->jobPosting->required_skills ?? []
+                $requiredSkills
             );
 
             $analysis->update([
                 'status' => AnalysisStatus::COMPLETED,
                 'similarity_score' => $result['score'],
                 'justification' => $result['justification'],
+                'matching_skills' => $result['matching_skills'] ?? [],
+                'missing_skills' => $result['missing_skills'] ?? [],
                 'analyzed_at' => now(),
             ]);
+
+            $this->notifyUploader($analysis->fresh());
         } catch (Throwable $e) {
-            Log::error('Échec analyse CV', [
+            Log::error('Échec analyse CV (tentative '.$this->attempts().'/'.$this->tries.')', [
                 'cv_id' => $this->cv->id,
                 'error' => $e->getMessage(),
             ]);
 
-            $analysis->update(['status' => AnalysisStatus::FAILED]);
-
+            // FAILED uniquement après épuisement des retries — voir failed()
             throw $e;
         }
     }
 
-    /** Appelé par Laravel après épuisement des $tries tentatives. */
+    /** Appelé quand le job échoue définitivement (retries épuisés). */
     public function failed(Throwable $exception): void
     {
-        $this->cv->analysis()?->update([
-            'status' => AnalysisStatus::FAILED,
-        ]);
+        $this->cv->loadMissing('analysis', 'uploader');
+        $this->cv->analysis()?->update(['status' => AnalysisStatus::FAILED]);
 
-        Log::critical('Analyse CV définitivement échouée', [
+        if ($this->cv->uploader && $this->cv->analysis) {
+            $this->cv->uploader->notify(
+                new CvAnalysisStatusNotification($this->cv->analysis->fresh())
+            );
+        }
+
+        Log::error('Analyse CV échouée', [
             'cv_id' => $this->cv->id,
-            'exception' => $exception->getMessage(),
+            'error' => $exception->getMessage(),
         ]);
+    }
+
+    /** Envoie une notification in-app au HR qui a uploadé le CV. */
+    private function notifyUploader(Analysis $analysis): void
+    {
+        $this->cv->loadMissing('uploader');
+
+        if ($this->cv->uploader) {
+            $this->cv->uploader->notify(new CvAnalysisStatusNotification($analysis));
+        }
     }
 }

@@ -7,6 +7,7 @@ use App\Http\Requests\StoreJobPostingRequest;
 use App\Http\Requests\UpdateJobPostingRequest;
 use App\Http\Resources\JobPostingResource;
 use App\Models\JobPosting;
+use App\Support\SkillNormalizer;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -29,7 +30,10 @@ class JobPostingController extends Controller
     /** POST /api/job-postings — crée une offre avec required_skills (JSON array). */
     public function store(StoreJobPostingRequest $request): JsonResponse
     {
-        $jobPosting = JobPosting::create($request->validated());
+        $data = $request->validated();
+        $data['required_skills'] = SkillNormalizer::normalize($data['required_skills']);
+
+        $jobPosting = JobPosting::create($data);
 
         return response()->json(
             new JobPostingResource($jobPosting),
@@ -46,7 +50,13 @@ class JobPostingController extends Controller
     /** PUT/PATCH /api/job-postings/{id} — met à jour partiellement ou totalement. */
     public function update(UpdateJobPostingRequest $request, JobPosting $jobPosting): JsonResponse
     {
-        $jobPosting->update($request->validated());
+        $data = $request->validated();
+
+        if (isset($data['required_skills'])) {
+            $data['required_skills'] = SkillNormalizer::normalize($data['required_skills']);
+        }
+
+        $jobPosting->update($data);
 
         return response()->json(new JobPostingResource($jobPosting));
     }

@@ -55,13 +55,15 @@ class ProcessCvAnalysisTest extends TestCase
         $this->assertNotNull($cv->analysis->justification);
         $this->assertNotNull($cv->analysis->analyzed_at);
         $this->assertNotEmpty($cv->extracted_skills);
+        $this->assertNotEmpty($cv->analysis->matching_skills);
+        $this->assertIsArray($cv->analysis->missing_skills);
     }
 
     /**
-     * Chemin FAILED : si extract() lève une exception, l'Analysis passe en failed
-     * et l'exception est relancée pour permettre les retries Laravel.
+     * Chemin d'erreur transitoire : le statut reste PROCESSING pendant les retries.
+     * FAILED n'est posé que dans failed() après épuisement des tentatives.
      */
-    public function test_job_marks_analysis_failed_when_extract_throws(): void
+    public function test_job_keeps_processing_status_when_extract_throws(): void
     {
         $cv = $this->createCvWithPendingAnalysis();
 
@@ -80,7 +82,7 @@ class ProcessCvAnalysisTest extends TestCase
         }
 
         $cv->analysis->refresh();
-        $this->assertSame(AnalysisStatus::FAILED, $cv->analysis->status);
+        $this->assertSame(AnalysisStatus::PROCESSING, $cv->analysis->status);
     }
 
     /**

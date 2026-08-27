@@ -22,7 +22,7 @@ use Illuminate\Foundation\Http\FormRequest;
 class StoreJobPostingRequest extends FormRequest
 {
     /**
-     * authorize() : l'accès est contrôlé par auth:sanctum sur la route,
+     * authorize() : l'accès est contrôlé par auth:api (JWT) sur la route,
      * pas ici. Retourne true car seuls les HR authentifiés atteignent ce point.
      */
     public function authorize(): bool

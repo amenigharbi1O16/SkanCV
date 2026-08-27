@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\AnalysisStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AnalysisResource;
+use App\Jobs\ProcessCvAnalysis;
 use App\Models\Analysis;
 use App\Models\Cv;
 use App\Models\JobPosting;
@@ -13,8 +15,7 @@ class AnalysisController extends Controller
 {
     /**
      * GET /api/analyses
-     * MISSION : historique filtrable de toutes les analyses (immuable).
-     * Filtres : job_posting_id, candidate_email
+     * MISSION : historique filtrable de toutes les analyses.
      */
     public function index(Request $request)
     {
@@ -35,7 +36,7 @@ class AnalysisController extends Controller
         }
 
         return AnalysisResource::collection(
-            $query->paginate($request->integer('per_page', 15))
+            $query->paginate($request->integer('per_page', 20))
         );
     }
 
@@ -49,8 +50,43 @@ class AnalysisController extends Controller
 
         $analysis = $cv->analysis;
 
-        abort_if($analysis === null, 404, "Analyse pas encore disponible pour ce CV.");
+        abort_if($analysis === null, 404, 'Analyse pas encore disponible pour ce CV.');
 
         return new AnalysisResource($analysis);
+    }
+
+    /**
+     * POST /job-postings/{jobPosting}/cvs/{cv}/analysis
+     * MISSION : déclencher ou relancer l'analyse d'un CV.
+     * Si PROCESSING → 409 Conflict.
+     * Sinon → reset à PENDING + dispatch du Job.
+     */
+    public function trigger(JobPosting $jobPosting, Cv $cv)
+    {
+        abort_if($cv->job_posting_id !== $jobPosting->id, 404);
+
+        $analysis = $cv->analysis;
+
+        if ($analysis && $analysis->status === AnalysisStatus::PROCESSING) {
+            return response()->json(['message' => 'Analyse déjà en cours.'], 409);
+        }
+
+        if (! $analysis) {
+            $analysis = Analysis::create([
+                'cv_id'  => $cv->id,
+                'status' => AnalysisStatus::PENDING,
+            ]);
+        } else {
+            $analysis->update([
+                'status'           => AnalysisStatus::PENDING,
+                'similarity_score' => null,
+                'justification'    => null,
+                'analyzed_at'      => null,
+            ]);
+        }
+
+        ProcessCvAnalysis::dispatch($cv);
+
+        return new AnalysisResource($analysis->fresh());
     }
 }

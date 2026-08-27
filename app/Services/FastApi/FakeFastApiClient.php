@@ -5,30 +5,53 @@ namespace App\Services\FastApi;
 /**
  * MISSION : simuler FastAPI en dev/test sans microservice Python.
  *
- * Activé quand FASTAPI_MODE=fake. Retourne des données réalistes avec
- * une vraie intersection de skills pour valider le pipeline Laravel.
+ * Activé quand FASTAPI_MODE=fake. Extraction basée sur le nom du fichier ;
+ * scoring avec intersection insensible à la casse.
  */
 class FakeFastApiClient implements FastApiClientInterface
 {
-    /** Simule POST /extract — pas de lecture PDF réelle. */
+    private const DEFAULT_SKILLS = [
+        'PHP', 'Laravel', 'JavaScript', 'React', 'Node.js', 'MySQL', 'Docker', 'Git',
+    ];
+
     public function extract(string $filePath): array
     {
+        $basename = pathinfo($filePath, PATHINFO_FILENAME);
+        $nameGuess = str_replace(['_', '-'], ' ', $basename);
+
         return [
-            'text' => 'Jean Dupont, développeur avec 5 ans d\'expérience en PHP et Laravel.',
-            'skills' => ['PHP', 'Laravel', 'MySQL', 'Docker'],
-            'candidate_name' => 'Jean Dupont',
+            'text' => "Candidat {$nameGuess}, développeur avec expérience PHP, Laravel, React et Docker.",
+            'skills' => self::DEFAULT_SKILLS,
+            'candidate_name' => ucwords($nameGuess),
         ];
     }
 
-    /** Simule POST /score — intersection simple (sans embeddings). */
     public function score(array $cvSkills, array $requiredSkills): array
     {
-        $matching = array_values(array_intersect($cvSkills, $requiredSkills));
-        $missing = array_values(array_diff($requiredSkills, $cvSkills));
+        $requiredSkills = $this->normalizeList($requiredSkills);
+        $cvSkills = $this->normalizeList($cvSkills);
 
-        $score = count($requiredSkills) > 0
-            ? round(count($matching) / count($requiredSkills), 4)
-            : 0.0;
+        if ($requiredSkills === []) {
+            return [
+                'score' => 0.0,
+                'justification' => 'Aucune compétence requise définie sur l\'offre.',
+                'matching_skills' => [],
+                'missing_skills' => [],
+            ];
+        }
+
+        $cvLower = array_map('mb_strtolower', $cvSkills);
+        $matching = [];
+        foreach ($requiredSkills as $required) {
+            if (in_array(mb_strtolower($required), $cvLower, true)) {
+                $matching[] = $required;
+            }
+        }
+
+        $matching = array_values(array_unique($matching));
+        $missing = array_values(array_diff($requiredSkills, $matching));
+
+        $score = round(count($matching) / count($requiredSkills), 4);
 
         return [
             'score' => $score,
@@ -42,5 +65,21 @@ class FakeFastApiClient implements FastApiClientInterface
             'matching_skills' => $matching,
             'missing_skills' => $missing,
         ];
+    }
+
+    /** @param  list<string>  $skills */
+    private function normalizeList(array $skills): array
+    {
+        $flat = [];
+        foreach ($skills as $skill) {
+            foreach (preg_split('/\s*,\s*/', (string) $skill) ?: [] as $part) {
+                $clean = trim($part);
+                if ($clean !== '') {
+                    $flat[] = $clean;
+                }
+            }
+        }
+
+        return array_values(array_unique($flat));
     }
 }
