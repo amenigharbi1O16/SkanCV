@@ -6,12 +6,12 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
     plugins: [
         laravel({
-            input: ['frontend/css/app.css', 'frontend/app.jsx'],
+            input: ['frontend/css/app.css', 'frontend/app.tsx'],
             refresh: true,
             fonts: [
-                bunny('Instrument Sans', {
-                    weights: [400, 500, 600],
-                }),
+                bunny('Instrument Sans', { weights: [400, 500, 600] }),
+                bunny('Space Grotesk', { weights: [500, 600, 700] }),
+                bunny('JetBrains Mono', { weights: [400, 500, 600] }),
             ],
         }),
         tailwindcss(),
