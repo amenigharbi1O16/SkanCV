@@ -3,6 +3,7 @@
 namespace App\Services\FastApi;
 
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
@@ -15,8 +16,10 @@ use RuntimeException;
  */
 class RealFastApiClient implements FastApiClientInterface
 {
-    public function __construct(private readonly string $baseUrl)
-    {
+    public function __construct(
+        private readonly string $baseUrl,
+        private readonly ?string $apiKey = null,
+    ) {
     }
 
     /**
@@ -31,7 +34,7 @@ class RealFastApiClient implements FastApiClientInterface
         $content = Storage::disk('local')->get($filePath);
 
         try {
-            $response = Http::timeout(120)
+            $response = $this->client(120)
                 ->attach('file', $content, basename($filePath))
                 ->post(rtrim($this->baseUrl, '/').'/extract')
                 ->throw();
@@ -48,7 +51,7 @@ class RealFastApiClient implements FastApiClientInterface
     public function score(array $cvSkills, array $requiredSkills): array
     {
         try {
-            $response = Http::timeout(60)
+            $response = $this->client(60)
                 ->post(rtrim($this->baseUrl, '/').'/score', [
                     'cv_skills' => $cvSkills,
                     'required_skills' => $requiredSkills,
@@ -59,5 +62,16 @@ class RealFastApiClient implements FastApiClientInterface
         }
 
         return $response->json();
+    }
+
+    private function client(int $timeout): PendingRequest
+    {
+        $request = Http::timeout($timeout);
+
+        if ($this->apiKey) {
+            $request = $request->withHeaders(['X-API-Key' => $this->apiKey]);
+        }
+
+        return $request;
     }
 }

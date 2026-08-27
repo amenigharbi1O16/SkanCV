@@ -2,9 +2,12 @@
 
 namespace App\Providers;
 
+use App\Models\JobPosting;
+use App\Policies\JobPostingPolicy;
 use App\Services\FastApi\FakeFastApiClient;
 use App\Services\FastApi\FastApiClientInterface;
 use App\Services\FastApi\RealFastApiClient;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -19,7 +22,10 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->bind(FastApiClientInterface::class, function () {
             return match (config('services.fastapi.mode', 'fake')) {
-                'real' => new RealFastApiClient(config('services.fastapi.url')),
+                'real' => new RealFastApiClient(
+                    config('services.fastapi.url'),
+                    config('services.fastapi.api_key'),
+                ),
                 default => new FakeFastApiClient(),
             };
         });
@@ -27,6 +33,6 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        //
+        Gate::policy(JobPosting::class, JobPostingPolicy::class);
     }
 }

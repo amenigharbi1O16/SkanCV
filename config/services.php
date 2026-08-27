@@ -36,8 +36,9 @@ return [
     ],
 
     'fastapi' => [
-        'mode' => env('FASTAPI_MODE', 'fake'),
-        'url'  => env('FASTAPI_URL', 'http://fastapi:8000'),
+        'mode'    => env('FASTAPI_MODE', 'fake'),
+        'url'     => env('FASTAPI_URL', 'http://fastapi:8000'),
+        'api_key' => env('FASTAPI_API_KEY'),
     ],
 
 ];

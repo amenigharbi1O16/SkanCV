@@ -17,6 +17,7 @@ RELATION :
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
+from app.dependencies import verify_api_key
 from app.models.schemas import ExtractResponse
 from app.services.pdf_extractor import extract_text_from_pdf, guess_candidate_name
 from app.services.skill_extractor import SkillExtractor, get_skill_extractor
@@ -24,7 +25,7 @@ from app.services.skill_extractor import SkillExtractor, get_skill_extractor
 router = APIRouter()
 
 
-@router.post("/extract", response_model=ExtractResponse)
+@router.post("/extract", response_model=ExtractResponse, dependencies=[Depends(verify_api_key)])
 async def extract(
     file: UploadFile = File(...),
     extractor: SkillExtractor = Depends(get_skill_extractor),
