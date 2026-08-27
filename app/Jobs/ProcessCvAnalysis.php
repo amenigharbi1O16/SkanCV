@@ -7,6 +7,7 @@ use App\Models\Analysis;
 use App\Models\Cv;
 use App\Notifications\CvAnalysisStatusNotification;
 use App\Services\FastApi\FastApiClientInterface;
+use App\Support\SkillNormalizer;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -87,9 +88,13 @@ class ProcessCvAnalysis implements ShouldQueue
                 $this->cv->update($cvUpdates);
             }
 
+            $requiredSkills = SkillNormalizer::normalize(
+                $this->cv->jobPosting->required_skills ?? []
+            );
+
             $result = $fastApi->score(
                 $extraction['skills'],
-                $this->cv->jobPosting->required_skills ?? []
+                $requiredSkills
             );
 
             $analysis->update([
