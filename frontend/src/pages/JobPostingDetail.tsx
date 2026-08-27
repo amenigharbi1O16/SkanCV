@@ -80,7 +80,7 @@ function ConfirmDeleteJobModal({ jobTitle, isOpen, onConfirm, onCancel, loading 
     );
 }
 
-type SortKey = 'candidate_name' | 'analysis_status' | 'created_at';
+type SortKey = 'candidate_name' | 'analysis_status' | 'similarity_score' | 'created_at';
 type SortDir = 'asc' | 'desc';
 
 export default function JobPostingDetail(): JSX.Element {
@@ -116,6 +116,17 @@ export default function JobPostingDetail(): JSX.Element {
     };
 
     useEffect(() => { fetchData(); }, [id]);
+
+    // Auto-polling : re-fetche toutes les 3s tant qu'un CV est en attente/en cours
+    useEffect(() => {
+        const hasPending = cvs.some(
+            (cv) => cv.analysis_status === 'pending' || cv.analysis_status === 'processing'
+        );
+        if (!hasPending) return;
+        const timer = setInterval(() => { fetchData(); }, 1000);
+        return () => clearInterval(timer);
+    }, [cvs]);
+
 
     const handleDeleteCv = async (): Promise<void> => {
         if (!cvToDelete) return;
@@ -158,8 +169,14 @@ export default function JobPostingDetail(): JSX.Element {
             : cvs;
 
         return [...filtered].sort((a, b) => {
-            let aVal: string = String(a[sortKey] ?? '');
-            let bVal: string = String(b[sortKey] ?? '');
+            if (sortKey === 'similarity_score') {
+                const aScore = a.similarity_score ?? -1;
+                const bScore = b.similarity_score ?? -1;
+                return sortDir === 'asc' ? aScore - bScore : bScore - aScore;
+            }
+
+            const aVal: string = String(a[sortKey] ?? '');
+            const bVal: string = String(b[sortKey] ?? '');
             const cmp = aVal.localeCompare(bVal);
             return sortDir === 'asc' ? cmp : -cmp;
         });
@@ -272,7 +289,12 @@ export default function JobPostingDetail(): JSX.Element {
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b border-line bg-paper/50">
-                                    {([['candidate_name', 'Candidat'], ['analysis_status', 'Statut'], ['created_at', 'Date']] as [SortKey, string][]).map(([key, label]) => (
+                                    {([
+                                        ['candidate_name', 'Candidat'],
+                                        ['similarity_score', 'Score'],
+                                        ['analysis_status', 'Statut'],
+                                        ['created_at', 'Date'],
+                                    ] as [SortKey, string][]).map(([key, label]) => (
                                         <th key={key}
                                             className="px-5 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wider cursor-pointer hover:text-ink transition select-none"
                                             onClick={() => handleSort(key)}>
@@ -295,7 +317,20 @@ export default function JobPostingDetail(): JSX.Element {
                                             <p className="text-xs text-muted truncate max-w-xs">{cv.file_name}</p>
                                         </td>
                                         <td className="px-5 py-3.5">
-                                            <StatusBadge status={cv.analysis_status} />
+                                            {cv.similarity_score != null ? (
+                                                <span className={`text-sm font-display font-semibold ${
+                                                    cv.similarity_score >= 0.7 ? 'text-match'
+                                                    : cv.similarity_score >= 0.4 ? 'text-warn'
+                                                    : 'text-danger'
+                                                }`}>
+                                                    {Math.round(cv.similarity_score * 100)}%
+                                                </span>
+                                            ) : (
+                                                <span className="text-xs text-muted">—</span>
+                                            )}
+                                        </td>
+                                        <td className="px-5 py-3.5">
+                                            <StatusBadge status={cv.analysis_status ?? 'pending'} />
                                         </td>
                                         <td className="px-5 py-3.5 text-xs text-muted font-mono">
                                             {cv.created_at ? new Date(cv.created_at).toLocaleDateString('fr-FR') : '—'}
