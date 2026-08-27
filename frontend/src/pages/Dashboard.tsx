@@ -44,7 +44,7 @@ export default function Dashboard(): JSX.Element {
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="font-display font-semibold text-2xl text-ink">Offres d'emploi</h1>
+                    <h1 className="font-display font-semibold text-2xl text-ink">Vos offres d'emploi</h1>
                     <p className="text-sm text-muted mt-1">
                         Suivez vos offres actives, filtrez par compétences et analysez les candidatures.
                     </p>

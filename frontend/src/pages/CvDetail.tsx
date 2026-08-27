@@ -135,8 +135,8 @@ export default function CvDetail(): JSX.Element {
                             style={{ width: `${Math.round((analysis.similarity_score ?? 0) * 100)}%` }}
                         />
                     </div>
-                    {analysis.summary && (
-                        <p className="text-sm text-ink mt-4 leading-relaxed">{analysis.summary}</p>
+                    {analysis.justification && (
+                        <p className="text-sm text-ink mt-4 leading-relaxed">{analysis.justification}</p>
                     )}
                 </div>
             )}
@@ -144,14 +144,14 @@ export default function CvDetail(): JSX.Element {
             {/* Skills Analysis */}
             {analysis && analysis.status === 'completed' && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {(analysis.matched_skills ?? []).length > 0 && (
+                    {(analysis.matching_skills ?? []).length > 0 && (
                         <div className="bg-surface border border-line rounded-xl p-5">
                             <h3 className="font-display font-semibold text-sm text-ink mb-3 flex items-center gap-2">
                                 <span className="w-2 h-2 rounded-full bg-match" />
-                                Compétences présentes ({analysis.matched_skills?.length})
+                                Compétences présentes ({analysis.matching_skills?.length})
                             </h3>
                             <div className="flex flex-wrap gap-1.5">
-                                {analysis.matched_skills?.map((skill) => (
+                                {analysis.matching_skills?.map((skill) => (
                                     <span key={skill} className="text-xs font-mono text-match bg-match-soft px-2 py-1 rounded-md">{skill}</span>
                                 ))}
                             </div>
@@ -183,13 +183,10 @@ export default function CvDetail(): JSX.Element {
                 </div>
             ) : null}
 
-            {/* Raw text */}
-            {analysis?.raw_text && (
-                <div className="bg-surface border border-line rounded-xl p-5">
-                    <h3 className="font-display font-semibold text-sm text-ink mb-3">Texte extrait du CV</h3>
-                    <pre className="text-xs text-muted whitespace-pre-wrap font-mono leading-relaxed max-h-64 overflow-y-auto">
-                        {analysis.raw_text}
-                    </pre>
+            {analysis?.status === 'failed' && (
+                <div className="bg-danger-soft border border-danger/30 rounded-xl p-6 text-center">
+                    <p className="text-sm font-medium text-danger">L'analyse a échoué.</p>
+                    <p className="text-xs text-muted mt-1">Réessayez en rechargeant la page ou contactez l'administrateur.</p>
                 </div>
             )}
         </div>

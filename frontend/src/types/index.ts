@@ -26,9 +26,11 @@ export interface Cv {
     id: number;
     job_posting_id: number;
     candidate_name: string;
-    file_name: string;
-    file_size?: number;
-    analysis_status: AnalysisStatus;
+    candidate_email?: string;
+    file_name?: string;
+    extracted_skills?: string[];
+    analysis_status?: AnalysisStatus;
+    similarity_score?: number;
     created_at?: string;
 }
 
@@ -37,11 +39,14 @@ export interface Analysis {
     cv_id: number;
     status: AnalysisStatus;
     similarity_score?: number;
-    matched_skills?: string[];
+    matching_skills?: string[];
     missing_skills?: string[];
-    summary?: string;
-    raw_text?: string;
-    created_at?: string;
+    justification?: string;
+    analyzed_at?: string;
+    candidate_name?: string;
+    candidate_email?: string;
+    job_posting_id?: number;
+    job_posting_title?: string;
 }
 
 export interface NotificationData {

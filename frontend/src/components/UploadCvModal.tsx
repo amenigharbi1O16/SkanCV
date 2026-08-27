@@ -75,7 +75,7 @@ export default function UploadCvModal({ jobPostingId, onClose, onSuccess }: Uplo
         try {
             if (files.length === 1) {
                 const formData = new FormData();
-                formData.append('cv', files[0]);
+                formData.append('file', files[0]);
                 await client.post(`/job-postings/${jobPostingId}/cvs`, formData, {
                     headers: { 'Content-Type': 'multipart/form-data' },
                     onUploadProgress: (e) => {
@@ -84,7 +84,7 @@ export default function UploadCvModal({ jobPostingId, onClose, onSuccess }: Uplo
                 });
             } else {
                 const formData = new FormData();
-                files.forEach((f) => formData.append('cvs[]', f));
+                files.forEach((f) => formData.append('files[]', f));
                 await client.post(`/job-postings/${jobPostingId}/cvs/batch`, formData, {
                     headers: { 'Content-Type': 'multipart/form-data' },
                     onUploadProgress: (e) => {
