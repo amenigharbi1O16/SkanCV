@@ -34,6 +34,7 @@ Route::middleware('auth:api')->group(function () {
 
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::get('/notifications/unread', [NotificationController::class, 'unread']);
+    Route::patch('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
     Route::patch('/notifications/{notificationId}/read', [NotificationController::class, 'markAsRead']);
 
     Route::apiResource('job-postings', JobPostingController::class);
