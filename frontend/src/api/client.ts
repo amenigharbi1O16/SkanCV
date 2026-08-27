@@ -1,12 +1,9 @@
 /**
- * client.js — Instance Axios centralisée pour toute l'app.
+ * client.ts — Instance Axios centralisée pour toute l'app.
  *
  * MISSION : chaque appel API doit porter le JWT stocké après login, sans
  * que chaque composant ait à le faire manuellement. C'est ici, et
  * seulement ici, que le header Authorization est géré.
- *
- * RELATION : utilisé par tous les fichiers dans pages/ et context/
- * qui appellent l'API Laravel (auth:api).
  */
 import axios from 'axios';
 
