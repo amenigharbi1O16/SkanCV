@@ -4,7 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * JobPosting représente une offre d'emploi publiée par un HR Staff.
@@ -29,6 +31,7 @@ class JobPosting extends Model
      * malveillante.
      */
     protected $fillable = [
+        'user_id',
         'title',
         'description',
         'required_skills',
@@ -66,8 +69,27 @@ class JobPosting extends Model
      * Utilisation : $jobPosting->cvs récupère une Collection de
      * tous les CVs liés à cette offre.
      */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
     public function cvs(): HasMany
     {
         return $this->hasMany(Cv::class);
+    }
+
+    /**
+     * Limite la résolution de route aux offres appartenant à l'utilisateur connecté.
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        $query = $this->where($field ?? $this->getRouteKeyName(), $value);
+
+        if (Auth::guard('api')->check()) {
+            $query->where('user_id', Auth::guard('api')->id());
+        }
+
+        return $query->firstOrFail();
     }
 }

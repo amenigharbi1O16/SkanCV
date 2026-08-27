@@ -9,6 +9,7 @@ use App\Http\Resources\JobPostingResource;
 use App\Models\JobPosting;
 use App\Support\SkillNormalizer;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 /**
  * MISSION : CRUD des offres d'emploi créées par le HR Staff.
@@ -17,10 +18,13 @@ use Illuminate\Http\JsonResponse;
  */
 class JobPostingController extends Controller
 {
-    /** GET /api/job-postings — liste toutes les offres. */
-    public function index(): JsonResponse
+    /** GET /api/job-postings — liste les offres de l'utilisateur connecté. */
+    public function index(Request $request): JsonResponse
     {
-        $jobPostings = JobPosting::all();
+        $jobPostings = JobPosting::query()
+            ->where('user_id', $request->user()->id)
+            ->latest()
+            ->get();
 
         // ->response() déclenche le pipeline complet de transformation
         // Laravel, qui applique le wrapping standard { "data": [...] }.
@@ -32,6 +36,7 @@ class JobPostingController extends Controller
     {
         $data = $request->validated();
         $data['required_skills'] = SkillNormalizer::normalize($data['required_skills']);
+        $data['user_id'] = $request->user()->id;
 
         $jobPosting = JobPosting::create($data);
 

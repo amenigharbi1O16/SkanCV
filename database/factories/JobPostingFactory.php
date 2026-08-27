@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\JobPosting;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class JobPostingFactory extends Factory
@@ -12,7 +13,7 @@ class JobPostingFactory extends Factory
     public function definition(): array
     {
         return [
-            // Titre réaliste pour les tests de recherche/filtrage
+            'user_id' => User::factory(),
             'title' => $this->faker->jobTitle(),
             'description' => $this->faker->paragraph(3),
             // Liste de compétences requises, stockée en JSON dans la table

@@ -14,8 +14,6 @@ class JobPostingTest extends TestCase
     protected User $user;
     protected string $token;
 
-    // setUp() s'exécute avant CHAQUE test : on authentifie systématiquement
-    // un HR Staff car toutes les routes offres sont protégées par auth:api
     protected function setUp(): void
     {
         parent::setUp();
@@ -42,7 +40,10 @@ class JobPostingTest extends TestCase
         $response->assertStatus(201)
                  ->assertJsonFragment(['title' => 'Développeur Laravel']);
 
-        $this->assertDatabaseHas('job_postings', ['title' => 'Développeur Laravel']);
+        $this->assertDatabaseHas('job_postings', [
+            'title' => 'Développeur Laravel',
+            'user_id' => $this->user->id,
+        ]);
     }
 
     public function test_creation_fails_without_required_fields(): void
@@ -57,7 +58,8 @@ class JobPostingTest extends TestCase
 
     public function test_can_list_job_postings(): void
     {
-        JobPosting::factory()->count(3)->create();
+        JobPosting::factory()->count(3)->for($this->user)->create();
+        JobPosting::factory()->count(2)->create();
 
         $response = $this->withHeaders($this->authHeader())
                           ->getJson('/api/job-postings');
@@ -68,7 +70,7 @@ class JobPostingTest extends TestCase
 
     public function test_can_delete_job_posting(): void
     {
-        $jobPosting = JobPosting::factory()->create();
+        $jobPosting = JobPosting::factory()->for($this->user)->create();
 
         $this->withHeaders($this->authHeader())
              ->deleteJson("/api/job-postings/{$jobPosting->id}")
