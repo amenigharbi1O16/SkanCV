@@ -24,15 +24,15 @@ class RealFastApiClient implements FastApiClientInterface
      */
     public function extract(string $filePath): array
     {
-        $fullPath = Storage::disk('local')->path($filePath);
-
-        if (! is_readable($fullPath)) {
+        if (! Storage::disk('local')->exists($filePath)) {
             throw new RuntimeException("Fichier CV introuvable : {$filePath}");
         }
 
+        $content = Storage::disk('local')->get($filePath);
+
         try {
             $response = Http::timeout(120)
-                ->attach('file', file_get_contents($fullPath), basename($fullPath))
+                ->attach('file', $content, basename($filePath))
                 ->post(rtrim($this->baseUrl, '/').'/extract')
                 ->throw();
         } catch (ConnectionException $e) {
