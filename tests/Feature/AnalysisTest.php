@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\AnalysisStatus;
 use App\Models\Analysis;
 use App\Models\Cv;
+use App\Models\JobPosting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -15,8 +16,10 @@ class AnalysisTest extends TestCase
 
     public function test_can_view_analysis_of_a_cv(): void
     {
-        $token = auth('api')->login(User::factory()->create());
-        $cv = Cv::factory()->create();
+        $user = User::factory()->create();
+        $jobPosting = JobPosting::factory()->for($user)->create();
+        $cv = Cv::factory()->for($jobPosting)->create();
+        $token = auth('api')->login($user);
     
         Analysis::factory()->create([
             'cv_id' => $cv->id,
@@ -36,8 +39,10 @@ class AnalysisTest extends TestCase
 
     public function test_returns_404_if_no_analysis_exists(): void
     {
-        $token = auth('api')->login(User::factory()->create());
-        $cv = Cv::factory()->create();
+        $user = User::factory()->create();
+        $jobPosting = JobPosting::factory()->for($user)->create();
+        $cv = Cv::factory()->for($jobPosting)->create();
+        $token = auth('api')->login($user);
 
         $response = $this->withHeader('Authorization', "Bearer $token")
             ->getJson("/api/job-postings/{$cv->job_posting_id}/cvs/{$cv->id}/analysis");

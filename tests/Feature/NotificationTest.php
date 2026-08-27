@@ -41,7 +41,7 @@ class NotificationTest extends TestCase
         Notification::fake();
         Queue::fake();
 
-        $jobPosting = JobPosting::factory()->create();
+        $jobPosting = JobPosting::factory()->for($this->user)->create();
         $file = UploadedFile::fake()->create('cv.pdf', 500, 'application/pdf');
 
         $this->withHeaders($this->authHeader())

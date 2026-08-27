@@ -67,7 +67,7 @@ class ProcessCvAnalysis implements ShouldQueue
         $this->notifyUploader($analysis->fresh());
 
         try {
-            if (! empty($this->cv->extracted_skills)) {
+            if (!empty($this->cv->extracted_skills)) {
                 $extraction = [
                     'text' => $this->cv->extracted_text ?? '',
                     'skills' => $this->cv->extracted_skills,
@@ -81,7 +81,7 @@ class ProcessCvAnalysis implements ShouldQueue
                     'extracted_skills' => $extraction['skills'],
                 ];
 
-                if (! empty($extraction['candidate_name'])) {
+                if (!empty($extraction['candidate_name'])) {
                     $cvUpdates['candidate_name'] = $extraction['candidate_name'];
                 }
 
@@ -108,7 +108,7 @@ class ProcessCvAnalysis implements ShouldQueue
 
             $this->notifyUploader($analysis->fresh());
         } catch (Throwable $e) {
-            Log::error('Échec analyse CV (tentative '.$this->attempts().'/'.$this->tries.')', [
+            Log::error('Échec analyse CV (tentative ' . $this->attempts() . '/' . $this->tries . ')', [
                 'cv_id' => $this->cv->id,
                 'error' => $e->getMessage(),
             ]);

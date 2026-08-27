@@ -20,7 +20,8 @@ class CvResource extends JsonResource
             'job_posting_id'    => $this->job_posting_id,
             'candidate_name'    => $this->candidate_name,
             'candidate_email'   => $this->candidate_email,
-            'extracted_skills'  => $this->extracted_skills, // null tant que /extract n'est pas passé
+            'file_name'         => basename($this->file_path),
+            'extracted_skills'  => $this->extracted_skills,
             'analysis_status'   => $this->whenLoaded('analysis', fn () =>
                 $this->analysis?->status?->value
             ),

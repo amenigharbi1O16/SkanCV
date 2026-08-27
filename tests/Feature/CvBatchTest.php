@@ -18,15 +18,16 @@ class CvBatchTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected User $user;
     protected string $token;
-
     protected JobPosting $jobPosting;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->token = auth('api')->login(User::factory()->create());
-        $this->jobPosting = JobPosting::factory()->create();
+        $this->user = User::factory()->create();
+        $this->token = auth('api')->login($this->user);
+        $this->jobPosting = JobPosting::factory()->for($this->user)->create();
         Storage::fake('local');
     }
 

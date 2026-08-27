@@ -46,6 +46,9 @@ Route::middleware('auth:api')->group(function () {
     Route::get('job-postings/{jobPosting}/cvs/{cv}/analysis', [AnalysisController::class, 'show'])
         ->name('job-postings.cvs.analysis.show');
 
+    Route::post('job-postings/{jobPosting}/cvs/{cv}/analysis', [AnalysisController::class, 'trigger'])
+        ->name('job-postings.cvs.analysis.trigger');
+
     // 5 uploads par minute par utilisateur authentifié, évite le spam de la queue
     Route::middleware('throttle:5,1')->group(function () {
         Route::post('job-postings/{jobPosting}/cvs', [CvController::class, 'store']);

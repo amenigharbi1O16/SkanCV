@@ -21,6 +21,9 @@ class AnalysisController extends Controller
     {
         $query = Analysis::query()
             ->with(['cv.jobPosting'])
+            ->whereHas('cv.jobPosting', function ($q) use ($request) {
+                $q->where('user_id', $request->user()->id);
+            })
             ->latest();
 
         if ($request->filled('job_posting_id')) {
