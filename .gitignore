@@ -32,3 +32,9 @@ test.png
 __pycache__/
 *.pyc
 fastapi-service/**/__pycache__/
+
+# Scratch / backups / envs locaux
+*.bak
+all_code.md
+fastapi-service/venv/
+testing/
