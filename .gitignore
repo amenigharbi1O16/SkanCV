@@ -38,3 +38,4 @@ fastapi-service/**/__pycache__/
 all_code.md
 fastapi-service/venv/
 testing
+testing
