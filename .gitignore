@@ -37,4 +37,4 @@ fastapi-service/**/__pycache__/
 *.bak
 all_code.md
 fastapi-service/venv/
-testing/
+testing
