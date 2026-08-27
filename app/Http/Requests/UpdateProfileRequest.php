@@ -28,4 +28,11 @@ class UpdateProfileRequest extends FormRequest
             ],
         ];
     }
+
+    public function messages(): array
+    {
+        return [
+            'email.unique' => 'Un compte existe déjà avec cet email.',
+        ];
+    }
 }
